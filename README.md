@@ -20,6 +20,12 @@ conda env create -f conda_env.yml
 conda activate 16884_hw
 ```
 
+In order to do training, run
+
+```
+python results/Cart_Pole.py
+python results/Lunar_Lander.py
+```
 
 ## **Algorithms Implemented**  
 
