@@ -1,8 +1,14 @@
+import os
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(abspath(__file__))))
+
+from agents.actor_critic_agents.SAC_Discrete import SAC_Discrete
 import gym
 
 from agents.DQN_agents.DDQN import DDQN
-from agents.hierarchical_agents.HRL.HRL import HRL
-from agents.hierarchical_agents.HRL.Model_HRL import Model_HRL
+# from agents.hierarchical_agents.HRL.HRL import HRL
+# from agents.hierarchical_agents.HRL.Model_HRL import Model_HRL
 from agents.Trainer import Trainer
 from utilities.data_structures.Config import Config
 
@@ -165,7 +171,7 @@ config.hyperparameters = {
 
 
 if __name__ == "__main__":
-    AGENTS = [HRL, DDQN] #] #DDQN, ,  ] #] ##  ] #, SAC_Discrete,  SAC_Discrete, DDQN] #HRL] #, SNN_HRL, DQN, h_DQN]
+    AGENTS = [SAC_Discrete, DDQN] #] #DDQN, ,  ] #] ##  ] #, SAC_Discrete,  SAC_Discrete, DDQN] #HRL] #, SNN_HRL, DQN, h_DQN]
     trainer = Trainer(config, AGENTS)
     trainer.run_games_for_agents()
 

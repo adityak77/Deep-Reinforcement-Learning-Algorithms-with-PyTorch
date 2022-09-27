@@ -1,3 +1,8 @@
+import os
+import sys
+from os.path import dirname, abspath
+sys.path.append(dirname(dirname(abspath(__file__))))
+
 import gym
 
 from agents.policy_gradient_agents.PPO import PPO
@@ -19,7 +24,7 @@ config.visualise_individual_results = False
 config.visualise_overall_agent_results = True
 config.standard_deviation_results = 1.0
 config.runs_per_agent = 3
-config.use_GPU = False
+config.use_GPU = True # False
 config.overwrite_existing_results_file = False
 config.randomise_random_seed = True
 config.save_model = False
@@ -87,7 +92,7 @@ config.hyperparameters = {
 }
 
 if __name__ == "__main__":
-    AGENTS = [TD3, DDPG, PPO]
+    AGENTS = [SAC, DDPG, PPO]
     trainer = Trainer(config, AGENTS)
     trainer.run_games_for_agents()
 

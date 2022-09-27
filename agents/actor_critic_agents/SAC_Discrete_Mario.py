@@ -3,37 +3,87 @@ from torch.optim import Adam
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from agents.Base_Agent import Base_Agent
+from agents.Base_Agent_Mario import Base_Agent_Mario
 from utilities.data_structures.Replay_Buffer import Replay_Buffer
-from agents.actor_critic_agents.SAC import SAC
+from agents.actor_critic_agents.SAC_Mario import SAC_Mario
 from utilities.Utility_Functions import create_actor_distribution
 
-class SAC_Discrete(SAC):
+class MarioNet(nn.Module):
+    """mini cnn structure
+  input -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> output
+  """
+
+    def __init__(self, input_dim, output_dim, device):
+        super().__init__()
+        c, h, w = input_dim
+
+        if h != 84:
+            raise ValueError(f"Expecting input height: 84, got: {h}")
+        if w != 84:
+            raise ValueError(f"Expecting input width: 84, got: {w}")
+
+        self.online = nn.Sequential(
+            nn.Conv2d(in_channels=c, out_channels=32, kernel_size=8, stride=4),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(3136, 512),
+            nn.ReLU(),
+            nn.Linear(512, output_dim),
+        ).to(device)
+
+        # self.target = copy.deepcopy(self.online)
+
+        # # Q_target parameters are frozen.
+        # for p in self.target.parameters():
+        #     p.requires_grad = False
+
+    def forward(self, input):
+        # input = input.unsqueeze(0)
+        batch = input.shape[0] // 4
+        input = torch.reshape(input, (batch, 4, 84, 84))
+        return self.online(input)
+        # if model == "online":
+        #     return self.online(input)
+        # elif model == "target":
+        #     return self.target(input)
+
+class SAC_Discrete_Mario(SAC_Mario):
     """The Soft Actor Critic for discrete actions. It inherits from SAC for continuous actions and only changes a few
     methods."""
     agent_name = "SAC"
     def __init__(self, config):
-        Base_Agent.__init__(self, config)
+        Base_Agent_Mario.__init__(self, config)
         assert self.action_types == "DISCRETE", "Action types must be discrete. Use SAC instead for continuous actions"
         assert self.config.hyperparameters["Actor"]["final_layer_activation"] == "Softmax", "Final actor layer must be softmax"
         self.hyperparameters = config.hyperparameters
-        self.critic_local = self.create_NN(input_dim=self.state_size, output_dim=self.action_size, key_to_use="Critic")
-        self.critic_local_2 = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
-                                           key_to_use="Critic", override_seed=self.config.seed + 1)
+        # for Mario
+        self.state_size = (4, 84, 84)
+        # self.critic_local = self.create_NN(input_dim=self.state_size, output_dim=self.action_size, key_to_use="Critic")
+        # self.critic_local_2 = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
+        #                                    key_to_use="Critic", override_seed=self.config.seed + 1)
+        self.critic_local = MarioNet(input_dim=self.state_size, output_dim=self.action_size, device=self.device)
+        self.critic_local_2 = MarioNet(input_dim=self.state_size, output_dim=self.action_size, device=self.device)
         self.critic_optimizer = torch.optim.Adam(self.critic_local.parameters(),
                                                  lr=self.hyperparameters["Critic"]["learning_rate"], eps=1e-4)
         self.critic_optimizer_2 = torch.optim.Adam(self.critic_local_2.parameters(),
                                                    lr=self.hyperparameters["Critic"]["learning_rate"], eps=1e-4)
-        self.critic_target = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
-                                           key_to_use="Critic")
-        self.critic_target_2 = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
-                                            key_to_use="Critic")
-        Base_Agent.copy_model_over(self.critic_local, self.critic_target)
-        Base_Agent.copy_model_over(self.critic_local_2, self.critic_target_2)
+        # self.critic_target = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
+        #                                    key_to_use="Critic")
+        # self.critic_target_2 = self.create_NN(input_dim=self.state_size, output_dim=self.action_size,
+        #                                     key_to_use="Critic")
+        self.critic_target = MarioNet(input_dim=self.state_size, output_dim=self.action_size, device=self.device)
+        self.critic_target_2 = MarioNet(input_dim=self.state_size, output_dim=self.action_size, device=self.device)
+        Base_Agent_Mario.copy_model_over(self.critic_local, self.critic_target)
+        Base_Agent_Mario.copy_model_over(self.critic_local_2, self.critic_target_2)
         self.memory = Replay_Buffer(self.hyperparameters["Critic"]["buffer_size"], self.hyperparameters["batch_size"],
                                     self.config.seed, device=self.device)
 
-        self.actor_local = self.create_NN(input_dim=self.state_size, output_dim=self.action_size, key_to_use="Actor")
+        # self.actor_local = self.create_NN(input_dim=self.state_size, output_dim=self.action_size, key_to_use="Actor")
+        self.actor_local = MarioNet(input_dim=self.state_size, output_dim=self.action_size, device=self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor_local.parameters(),
                                           lr=self.hyperparameters["Actor"]["learning_rate"], eps=1e-4)
         self.automatic_entropy_tuning = self.hyperparameters["automatically_tune_entropy_hyperparameter"]
@@ -52,7 +102,7 @@ class SAC_Discrete(SAC):
     def produce_action_and_action_info(self, state):
         """Given the state, produces an action, the probability of the action, the log probability of the action, and
         the argmax action"""
-        action_probabilities = self.actor_local(state)
+        action_probabilities = F.softmax(self.actor_local(state))
         max_probability_action = torch.argmax(action_probabilities, dim=-1)
         action_distribution = create_actor_distribution(self.action_types, action_probabilities, self.action_size)
         action = action_distribution.sample().cpu()

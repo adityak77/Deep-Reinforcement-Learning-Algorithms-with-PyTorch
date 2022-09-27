@@ -5,7 +5,7 @@ from contextlib import closing
 #
 # from pathos.multiprocessing import ProcessingPool as Pool
 
-from torch.multiprocessing import Pool
+from torch.multiprocessing import Pool, set_start_method, spawn
 from random import randint
 
 from utilities.OU_Noise import OU_Noise
@@ -28,9 +28,14 @@ class Parallel_Experience_Generator(object):
     def play_n_episodes(self, n, exploration_epsilon=None):
         """Plays n episodes in parallel using the fixed policy and returns the data"""
         self.exploration_epsilon = exploration_epsilon
+        try:
+            set_start_method('spawn')
+        except RuntimeError:
+            pass
         with closing(Pool(processes=n)) as pool:
             results = pool.map(self, range(n))
             pool.terminate()
+        # results = spawn(fn=self, args=tuple(range(n)), nprocs=n, join=True)
         states_for_all_episodes = [episode[0] for episode in results]
         actions_for_all_episodes = [episode[1] for episode in results]
         rewards_for_all_episodes = [episode[2] for episode in results]

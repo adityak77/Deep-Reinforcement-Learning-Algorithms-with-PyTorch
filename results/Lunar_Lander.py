@@ -5,30 +5,28 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 
 import gym
 
-from agents.actor_critic_agents.A2C import A2C
-from agents.DQN_agents.Dueling_DDQN import Dueling_DDQN
-from agents.actor_critic_agents.SAC_Discrete import SAC_Discrete
-from agents.actor_critic_agents.A3C import A3C
 from agents.policy_gradient_agents.PPO import PPO
+from agents.actor_critic_agents.DDPG import DDPG
+from agents.actor_critic_agents.SAC import SAC
+from agents.actor_critic_agents.TD3 import TD3
+from agents.DQN_agents.DDQN import DDQN
+from agents.actor_critic_agents.SAC_Discrete import SAC_Discrete
 from agents.Trainer import Trainer
 from utilities.data_structures.Config import Config
-from agents.DQN_agents.DDQN import DDQN
-from agents.DQN_agents.DDQN_With_Prioritised_Experience_Replay import DDQN_With_Prioritised_Experience_Replay
-from agents.DQN_agents.DQN import DQN
-from agents.DQN_agents.DQN_With_Fixed_Q_Targets import DQN_With_Fixed_Q_Targets
+
 
 config = Config()
 config.seed = 1
-config.environment = gym.make("CartPole-v0")
-config.num_episodes_to_run = 450
-config.file_to_save_data_results = "results/data_and_graphs/Cart_Pole_Results_Data.pkl"
-config.file_to_save_results_graph = "results/data_and_graphs/Cart_Pole_Results_Graph.png"
+config.environment = gym.make("LunarLander-v2")
+config.num_episodes_to_run = 1000 # 450
+config.file_to_save_data_results = "results/data_and_graphs/Lunar_Lander_full_Results_Data.pkl"
+config.file_to_save_results_graph = "results/data_and_graphs/Lunar_Lander_full_Results_Graph.png"
 config.show_solution_score = False
 config.visualise_individual_results = False
 config.visualise_overall_agent_results = True
 config.standard_deviation_results = 1.0
-config.runs_per_agent = 5 
-config.use_GPU = False
+config.runs_per_agent = 3
+config.use_GPU = False # True
 config.overwrite_existing_results_file = False
 config.randomise_random_seed = True
 config.save_model = False
@@ -36,7 +34,7 @@ config.save_model = False
 
 config.hyperparameters = {
     "DQN_Agents": {
-        "learning_rate": 0.01,
+        "learning_rate": 0.001, # 0.1, # 0.001, # 0.01, # 0.01
         "batch_size": 256,
         "buffer_size": 40000,
         "epsilon": 1.0,
@@ -54,18 +52,7 @@ config.hyperparameters = {
         "learning_iterations": 1,
         "clip_rewards": False
     },
-    "Stochastic_Policy_Search_Agents": {
-        "policy_network_type": "Linear",
-        "noise_scale_start": 1e-2,
-        "noise_scale_min": 1e-3,
-        "noise_scale_max": 2.0,
-        "noise_scale_growth_factor": 2.0,
-        "stochastic_action_decision": False,
-        "num_policies": 10,
-        "episodes_per_policy": 1,
-        "num_policies_to_keep": 5,
-        "clip_rewards": False
-    },
+
     "Policy_Gradient_Agents": {
         "learning_rate": 0.05,
         "linear_hidden_units": [20, 20],
@@ -83,21 +70,10 @@ config.hyperparameters = {
         "epsilon_decay_rate_denominator": 1.0,
         "clip_rewards": False
     },
-
+    
     "Actor_Critic_Agents":  {
-
-        "learning_rate": 0.005,
-        "linear_hidden_units": [20, 10],
-        "final_layer_activation": ["SOFTMAX", None],
-        "gradient_clipping_norm": 5.0,
-        "discount_rate": 0.99,
-        "epsilon_decay_rate_denominator": 1.0,
-        "normalise_rewards": True,
-        "exploration_worker_difference": 2.0,
-        "clip_rewards": False,
-
         "Actor": {
-            "learning_rate": 0.0003,
+            "learning_rate": 0.003, # 0.0003, # 0.02, # 0.003, # 0.003,
             "linear_hidden_units": [64, 64],
             "final_layer_activation": "Softmax",
             "batch_norm": False,
@@ -107,7 +83,7 @@ config.hyperparameters = {
         },
 
         "Critic": {
-            "learning_rate": 0.0003,
+            "learning_rate": 0.003, # 0.0003, # 0.02, # 0.003, # 0.02,
             "linear_hidden_units": [64, 64],
             "final_layer_activation": None,
             "batch_norm": False,
@@ -126,20 +102,20 @@ config.hyperparameters = {
         "action_noise_std": 0.2,  # for TD3
         "action_noise_clipping_range": 0.5,  # for TD3
         "update_every_n_steps": 1,
-        "learning_updates_per_learning_session": 1,
+        "learning_updates_per_learning_session": 1, # 1
         "automatically_tune_entropy_hyperparameter": True,
         "entropy_term_weight": None,
         "add_extra_noise": False,
-        "do_evaluation_iterations": True
+        "do_evaluation_iterations": True,
+        "clip_rewards": False,
     }
+
 }
 
 if __name__ == "__main__":
-    AGENTS = [PPO, SAC_Discrete, PPO, DDQN]
+    AGENTS = [PPO, SAC_Discrete, DDQN] # [SAC_Discrete, DDQN]
     trainer = Trainer(config, AGENTS)
     trainer.run_games_for_agents()
-
-
 
 
 

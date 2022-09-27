@@ -11,7 +11,7 @@ from nn_builder.pytorch.NN import NN
 # from tensorboardX import SummaryWriter
 from torch.optim import optimizer
 
-class Base_Agent(object):
+class Base_Agent_Mario(object):
 
     def __init__(self, config):
         self.logger = self.setup_logger()
@@ -32,13 +32,14 @@ class Base_Agent(object):
         self.average_score_required_to_win = self.get_score_required_to_win()
         self.rolling_score_window = self.get_trials()
         # self.max_steps_per_episode = self.environment.spec.max_episode_steps
+        self.max_steps_per_episode = 500
         self.total_episode_score_so_far = 0
         self.game_full_episode_scores = []
         self.rolling_results = []
         self.max_rolling_score_seen = float("-inf")
         self.max_episode_score_seen = float("-inf")
         self.episode_number = 0
-        self.device = "cuda:0" if config.use_GPU else "cpu"
+        self.device = "cuda:1" if config.use_GPU else "cpu"
         self.visualise_results_boolean = config.visualise_individual_results
         self.global_step_number = 0
         self.turn_off_exploration = False
@@ -88,18 +89,15 @@ class Base_Agent(object):
             state_size = random_state["observation"].shape[0] + random_state["desired_goal"].shape[0]
             return state_size
         else:
-            # if 'LunarLander' in self.environment_title: 
-            #     return int(random_state[0].shape[0])
-            # try:
-            return random_state.size
-            # except:
-            #     # for Mario
-            #     return 4 * 84 * 84 # (4, 84, 84)
+            try:
+                return random_state.size
+            except:
+                # for Mario
+                return 4 * 84 * 84 # (4, 84, 84)
 
     def get_score_required_to_win(self):
         """Gets average score required to win game"""
         print("TITLE ", self.environment_title)
-        if 'Atari' in self.environment_title or 'LunarLander' in self.environment_title: return 500
         if self.environment_title == "FetchReach": return -5
         if self.environment_title in ["AntMaze", "Hopper", "Walker2d"]:
             print("Score required to win set to infinity therefore no learning rate annealing will happen")
@@ -113,7 +111,6 @@ class Base_Agent(object):
 
     def get_trials(self):
         """Gets the number of trials to average a score over"""
-        if 'Atari' in self.environment_title or 'LunarLander' in self.environment_title: return 100
         if self.environment_title in ["AntMaze", "FetchReach", "Hopper", "Walker2d", "CartPole"]: return 100
         try: return self.environment.unwrapped.trials
         except AttributeError: 
